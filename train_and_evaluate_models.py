@@ -55,10 +55,10 @@ def setup_ddp(rank, world_size):
     world_size = int(os.getenv('WORLD_SIZE', 3))
     start_rank = int(os.getenv('START_RANK', 0))
     init_method = f'tcp://{master_addr}:{master_port}' 
-    print(init_method)
-    print(f"start_rank: {start_rank}, rank: {rank}, init_method: {init_method}")
+    print(f"world_size: {world_size}, start_rank + rank: {start_rank + rank}, start_rank: {start_rank}, rank: {rank}, init_method: {init_method}")
     # initialize the process group
     dist.init_process_group("nccl", rank=start_rank + rank, world_size=world_size, init_method=init_method) 
+    print(init_method)
 
 
 def cleanup():
