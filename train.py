@@ -6,18 +6,21 @@ import losses
 import models
 import datasets
 import utils
+from torch.nn.parallel import DistributedDataParallel as DDP
+
 
 class Trainer():
 
     def __init__(self, model, train_loader, params):
 
         self.params = params
-
+        self.rank = self.params['rank']
         # define loaders:
         self.train_loader = train_loader
 
         # define model:
-        self.model = model
+        self.model = model.to(self.rank)
+        self.model = DDP(self.model, device_ids=[self.rank])
 
         # define important objects:
         self.compute_loss = losses.get_loss_function(params)
@@ -38,6 +41,7 @@ class Trainer():
             # reset gradients:
             self.optimizer.zero_grad()
             # compute loss:
+            batch = batch.to(self.rank)
             batch_loss = self.compute_loss(batch, self.model, self.params, self.encode_location)
             # backwards pass:
             batch_loss.backward()
@@ -64,13 +68,17 @@ def launch_training_run(ovr):
     params['save_path'] = os.path.join(params['save_base'], params['experiment_name'])
     if params['timestamp']:
         params['save_path'] = params['save_path'] + '_' + utils.get_time_stamp()
-    os.makedirs(params['save_path'], exist_ok=False)
+    os.makedirs(params['save_path'], exist_ok=True)
+
+
 
     # data:
     train_dataset = datasets.get_train_data(params)
     params['input_dim'] = train_dataset.input_dim
     params['num_classes'] = train_dataset.num_classes
     params['class_to_taxa'] = train_dataset.class_to_taxa
+    
+
     train_loader = torch.utils.data.DataLoader(
         train_dataset,
         batch_size=params['batch_size'],
@@ -79,7 +87,6 @@ def launch_training_run(ovr):
 
     # model:
     model = models.get_model(params)
-    model = model.to(params['device'])
 
     # train:
     trainer = Trainer(model, train_loader, params)
@@ -87,3 +94,5 @@ def launch_training_run(ovr):
         print(f'epoch {epoch+1}')
         trainer.train_one_epoch()
     trainer.save_model()
+
+

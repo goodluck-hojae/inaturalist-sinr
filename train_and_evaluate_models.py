@@ -44,19 +44,52 @@ loss
 '''
 train_params['loss'] = 'an_full'
 
-# train:
-train.launch_training_run(train_params)
+train_params['rank'] = 0
 
-# evaluate:
-for eval_type in ['snt', 'iucn', 'geo_prior', 'geo_feature']:
-    eval_params = {}
-    eval_params['exp_base'] = './experiments'
-    eval_params['experiment_name'] = train_params['experiment_name']
-    eval_params['eval_type'] = eval_type
-    if eval_type == 'iucn':
-        eval_params['device'] = torch.device('cpu') # for memory reasons
-    cur_results = eval.launch_eval_run(eval_params)
-    np.save(os.path.join(eval_params['exp_base'], train_params['experiment_name'], f'results_{eval_type}.npy'), cur_results)
+# Setup DDP
+import torch.distributed as dist
+import torch.multiprocessing as mp
+
+def setup_ddp(rank, world_size):
+    os.environ['MASTER_ADDR'] = 'gypsum-gpu154'
+    os.environ['MASTER_PORT'] = '12355'
+
+    # initialize the process group
+    dist.init_process_group("nccl", rank=rank, world_size=world_size) 
+
+
+def cleanup():
+    dist.destroy_process_group()
+
+
+def demo_basic(rank, world_size):
+    print(f"Running basic DDP example on rank {rank}.")
+    setup_ddp(rank, world_size)
+    train_params['rank'] = rank
+    # train:    
+    train.launch_training_run(train_params)
+
+
+def run_demo(demo_fn, world_size):
+    mp.spawn(demo_fn,
+             args=(world_size,),
+             nprocs=world_size,
+             join=True)
+
+
+if __name__ == "__main__":
+    n_gpus = torch.cuda.device_count()
+    run_demo(demo_basic, n_gpus)
+    # # evaluate:
+    # for eval_type in ['snt', 'iucn', 'geo_prior', 'geo_feature']:
+    #     eval_params = {}
+    #     eval_params['exp_base'] = './experiments'
+    #     eval_params['experiment_name'] = train_params['experiment_name']
+    #     eval_params['eval_type'] = eval_type
+    #     if eval_type == 'iucn':
+    #         eval_params['device'] = torch.device('cpu') # for memory reasons
+    #     cur_results = eval.launch_eval_run(eval_params)
+    #     np.save(os.path.join(eval_params['exp_base'], train_params['experiment_name'], f'results_{eval_type}.npy'), cur_results)
 
 '''
 Note that train_params and eval_params do not contain all of the parameters of interest. Instead,

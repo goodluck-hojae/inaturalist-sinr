@@ -64,6 +64,11 @@ def get_default_params_train(overrides={}):
     '''
     params['log_frequency'] = 512
 
+    '''
+    ddp
+    '''
+    params['rank'] = 0
+
     params = apply_overrides(params, overrides)
 
     return params

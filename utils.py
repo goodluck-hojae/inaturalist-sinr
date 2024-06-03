@@ -159,3 +159,4 @@ def average_precision_score_faster(y_true, y_scores):
     recall_e = (recall_e[1:] - recall_e[:-1])[:-1]
     map_score = (recall_e*precision).sum()
     return map_score
+ 
