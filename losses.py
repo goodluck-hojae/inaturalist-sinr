@@ -101,7 +101,7 @@ def an_full(batch, model, params, loc_to_feats, neg_type='hard'):
     loc_feat = loc_feat.to(params['device'])
     class_id = class_id.to(params['device'])
     
-    assert model.inc_bias == False
+    # assert model.inc_bias == False # Removed for DDP
     batch_size = loc_feat.shape[0]
     
     # create random background samples and extract features
@@ -114,8 +114,8 @@ def an_full(batch, model, params, loc_to_feats, neg_type='hard'):
     loc_emb = loc_emb_cat[:batch_size, :]
     loc_emb_rand = loc_emb_cat[batch_size:, :]
     # get predictions for locations and background locations
-    loc_pred = torch.sigmoid(model.class_emb(loc_emb))
-    loc_pred_rand = torch.sigmoid(model.class_emb(loc_emb_rand))
+    loc_pred = torch.sigmoid(model.module.class_emb(loc_emb))
+    loc_pred_rand = torch.sigmoid(model.module.class_emb(loc_emb_rand))
     
     # data loss
     if neg_type == 'hard':

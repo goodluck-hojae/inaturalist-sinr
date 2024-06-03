@@ -7,6 +7,7 @@ import models
 import datasets
 import utils
 from torch.nn.parallel import DistributedDataParallel as DDP
+import torch.distributed as dist
 
 
 class Trainer():
@@ -14,13 +15,21 @@ class Trainer():
     def __init__(self, model, train_loader, params):
 
         self.params = params
-        self.rank = self.params['rank']
+        self.rank = dist.get_rank() % torch.cuda.device_count()
+        print('rank', self.rank)
         # define loaders:
         self.train_loader = train_loader
 
-        # define model:
-        self.model = model.to(self.rank)
-        self.model = DDP(self.model, device_ids=[self.rank])
+        # define model: 
+        torch.cuda.set_device(self.rank)
+        self.model = model.cuda(self.rank)
+        
+        print(f"Rank {self.rank} reached the barrier.")
+        dist.barrier() 
+        print(f"Rank {self.rank} passed the barrier.")
+        self.model = DDP(self.model, device_ids=[self.rank]) # local rank
+        
+        
 
         # define important objects:
         self.compute_loss = losses.get_loss_function(params)
@@ -41,7 +50,7 @@ class Trainer():
             # reset gradients:
             self.optimizer.zero_grad()
             # compute loss:
-            batch = batch.to(self.rank)
+            batch = [item.to(torch.device('cuda', self.rank)) for item in batch]
             batch_loss = self.compute_loss(batch, self.model, self.params, self.encode_location)
             # backwards pass:
             batch_loss.backward()
@@ -79,18 +88,22 @@ def launch_training_run(ovr):
     params['class_to_taxa'] = train_dataset.class_to_taxa
     
 
+    print(f"Current batch size: { params['batch_size'] }")
+
+    sampler = torch.utils.data.DistributedSampler(train_dataset, num_replicas=dist.get_world_size(), rank=dist.get_rank())
     train_loader = torch.utils.data.DataLoader(
         train_dataset,
         batch_size=params['batch_size'],
-        shuffle=True,
+        sampler=sampler, 
         num_workers=4)
-
     # model:
     model = models.get_model(params)
 
     # train:
     trainer = Trainer(model, train_loader, params)
+    
     for epoch in range(0, params['num_epochs']):
+        sampler.set_epoch(epoch)
         print(f'epoch {epoch+1}')
         trainer.train_one_epoch()
     trainer.save_model()

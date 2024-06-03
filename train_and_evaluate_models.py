@@ -43,19 +43,22 @@ loss
 - Valid values: 'an_full', 'an_slds', 'an_ssdl', 'an_full_me', 'an_slds_me', 'an_ssdl_me'
 '''
 train_params['loss'] = 'an_full'
-
-train_params['rank'] = 0
+ 
 
 # Setup DDP
 import torch.distributed as dist
 import torch.multiprocessing as mp
 
 def setup_ddp(rank, world_size):
-    os.environ['MASTER_ADDR'] = 'gypsum-gpu154'
-    os.environ['MASTER_PORT'] = '12355'
-
+    master_addr = os.getenv('MASTER_ADDR', 'gypsum-gpu153')
+    master_port = os.getenv('MASTER_PORT', '12345')
+    world_size = int(os.getenv('WORLD_SIZE', 3))
+    start_rank = int(os.getenv('START_RANK', 0))
+    init_method = f'tcp://{master_addr}:{master_port}' 
+    print(init_method)
+    print(f"start_rank: {start_rank}, rank: {rank}, init_method: {init_method}")
     # initialize the process group
-    dist.init_process_group("nccl", rank=rank, world_size=world_size) 
+    dist.init_process_group("nccl", rank=start_rank + rank, world_size=world_size, init_method=init_method) 
 
 
 def cleanup():
@@ -64,32 +67,35 @@ def cleanup():
 
 def demo_basic(rank, world_size):
     print(f"Running basic DDP example on rank {rank}.")
-    setup_ddp(rank, world_size)
-    train_params['rank'] = rank
+    setup_ddp(rank, world_size) 
     # train:    
     train.launch_training_run(train_params)
 
 
 def run_demo(demo_fn, world_size):
+    world_size = int(os.getenv('WORLD_SIZE', 1))
+    nprocs = int(os.getenv('NPROCS', 1))
+
     mp.spawn(demo_fn,
              args=(world_size,),
-             nprocs=world_size,
+             nprocs=nprocs,
              join=True)
 
-
 if __name__ == "__main__":
-    n_gpus = torch.cuda.device_count()
-    run_demo(demo_basic, n_gpus)
-    # # evaluate:
-    # for eval_type in ['snt', 'iucn', 'geo_prior', 'geo_feature']:
-    #     eval_params = {}
-    #     eval_params['exp_base'] = './experiments'
-    #     eval_params['experiment_name'] = train_params['experiment_name']
-    #     eval_params['eval_type'] = eval_type
-    #     if eval_type == 'iucn':
-    #         eval_params['device'] = torch.device('cpu') # for memory reasons
-    #     cur_results = eval.launch_eval_run(eval_params)
-    #     np.save(os.path.join(eval_params['exp_base'], train_params['experiment_name'], f'results_{eval_type}.npy'), cur_results)
+    world_size = int(os.getenv('WORLD_SIZE', 1))
+    nprocs = int(os.getenv('NPROCS', 1))
+    rank = int(os.getenv('RANK', 0))  # Get the rank set by torchrun
+    run_demo(demo_basic, world_size)
+    # evaluate:
+    for eval_type in ['snt', 'iucn', 'geo_prior', 'geo_feature']:
+        eval_params = {}
+        eval_params['exp_base'] = './experiments'
+        eval_params['experiment_name'] = train_params['experiment_name']
+        eval_params['eval_type'] = eval_type
+        if eval_type == 'iucn':
+            eval_params['device'] = torch.device('cpu') # for memory reasons
+        cur_results = eval.launch_eval_run(eval_params)
+        np.save(os.path.join(eval_params['exp_base'], train_params['experiment_name'], f'results_{eval_type}.npy'), cur_results)
 
 '''
 Note that train_params and eval_params do not contain all of the parameters of interest. Instead,

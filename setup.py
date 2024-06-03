@@ -34,7 +34,7 @@ def get_default_params_train(overrides={}):
     '''
     data files
     '''
-    params['obs_file'] = 'geo_prior_train.csv'
+    params['obs_file'] = 'sub_geo_prior_train_001.csv'
     params['taxa_file'] = 'geo_prior_train_meta.json'
 
     '''
@@ -54,7 +54,7 @@ def get_default_params_train(overrides={}):
     '''
     optimization
     '''
-    params['batch_size'] = 2048
+    params['batch_size'] = 6144
     params['lr'] = 0.0005
     params['lr_decay'] = 0.98
     params['num_epochs'] = 10
@@ -62,13 +62,11 @@ def get_default_params_train(overrides={}):
     '''
     saving
     '''
-    params['log_frequency'] = 512
+    params['log_frequency'] = 10
 
     '''
     ddp
-    '''
-    params['rank'] = 0
-
+    ''' 
     params = apply_overrides(params, overrides)
 
     return params
