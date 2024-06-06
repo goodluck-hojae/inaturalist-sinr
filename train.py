@@ -13,7 +13,7 @@ import torch.distributed as dist
 class Trainer():
 
     def __init__(self, model, train_loader, params):
-
+        import os 
         self.params = params
         self.rank = dist.get_rank() % torch.cuda.device_count()
         print('rank', self.rank)
@@ -30,7 +30,6 @@ class Trainer():
         self.model = DDP(self.model, device_ids=[self.rank]) # local rank
         
         
-
         # define important objects:
         self.compute_loss = losses.get_loss_function(params)
         self.encode_location = self.train_loader.dataset.enc.encode

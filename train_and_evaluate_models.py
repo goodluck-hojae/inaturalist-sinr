@@ -50,7 +50,7 @@ import torch.distributed as dist
 import torch.multiprocessing as mp
 
 def setup_ddp(rank, world_size):
-    master_addr = os.getenv('MASTER_ADDR', 'gypsum-gpu153')
+    master_addr = os.getenv('MASTER_ADDR', 'gypsum-gpu174')
     master_port = os.getenv('MASTER_PORT', '12345')
     world_size = int(os.getenv('WORLD_SIZE', 3))
     start_rank = int(os.getenv('START_RANK', 0))
@@ -75,7 +75,7 @@ def demo_basic(rank, world_size):
 def run_demo(demo_fn, world_size):
     world_size = int(os.getenv('WORLD_SIZE', 1))
     nprocs = int(os.getenv('NPROCS', 1))
-
+    print(f'word_size : {world_size}, nprocs : {nprocs}')
     mp.spawn(demo_fn,
              args=(world_size,),
              nprocs=nprocs,

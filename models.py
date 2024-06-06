@@ -2,6 +2,8 @@ import torch
 import torch.utils.data
 import torch.nn as nn
 
+import torch.distributed as dist
+
 def get_model(params):
 
     if params['model'] == 'ResidualFCNet':
@@ -34,6 +36,7 @@ class ResidualFCNet(nn.Module):
 
     def __init__(self, num_inputs, num_classes, num_filts, depth=4):
         super(ResidualFCNet, self).__init__()
+        num_filts *= 10
         self.inc_bias = False
         self.class_emb = nn.Linear(num_filts, num_classes, bias=self.inc_bias)
         layers = []
@@ -41,10 +44,27 @@ class ResidualFCNet(nn.Module):
         layers.append(nn.ReLU(inplace=True))
         for i in range(depth):
             layers.append(ResLayer(num_filts))
-        self.feats = torch.nn.Sequential(*layers)
+        layers_2 = []
+        layers_2.append(nn.Linear(num_inputs, num_filts))
+        layers_2.append(nn.ReLU(inplace=True))
+        for i in range(depth):
+            layers_2.append(ResLayer(num_filts))
+        self.feats_1 = torch.nn.Sequential(*layers)
+        self.feats_2 = torch.nn.Sequential(*layers_2)
 
     def forward(self, x, class_of_interest=None, return_feats=False):
-        loc_emb = self.feats(x)
+        # loc_emb = self.feats_1(x)
+        if dist.get_rank() == 0:
+            another_gpu = 1
+        else:
+            another_gpu = 0
+        x1 = x.cuda(dist.get_rank())
+        x2 = x.cuda(another_gpu)
+
+        self.feats_2 = self.feats_2.cuda(another_gpu)
+        loc_emb_1 = self.feats_1(x1)
+        loc_emb_2 = self.feats_2(x2)
+        loc_emb = loc_emb_1 + loc_emb_2.cuda(dist.get_rank())
         if return_feats:
             return loc_emb
         if class_of_interest is None:
