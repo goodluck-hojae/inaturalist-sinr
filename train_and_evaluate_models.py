@@ -46,16 +46,16 @@ train_params['loss'] = 'an_full'
 
 train_params['rank'] = 0
 
-# Setup DDP
+# # Setup DDP
 import torch.distributed as dist
 import torch.multiprocessing as mp
 
-def setup_ddp(rank, world_size):
-    os.environ['MASTER_ADDR'] = 'gypsum-gpu154'
-    os.environ['MASTER_PORT'] = '12355'
+# def setup_ddp(rank, world_size):
+#     os.environ['MASTER_ADDR'] = 'gypsum-gpu154'
+#     os.environ['MASTER_PORT'] = '12355'
 
-    # initialize the process group
-    dist.init_process_group("nccl", rank=rank, world_size=world_size) 
+#     # initialize the process group
+#     dist.init_process_group("nccl", rank=rank, world_size=world_size) 
 
 
 def cleanup():
@@ -64,7 +64,7 @@ def cleanup():
 
 def demo_basic(rank, world_size):
     print(f"Running basic DDP example on rank {rank}.")
-    setup_ddp(rank, world_size)
+    # setup_ddp(rank, world_size)
     train_params['rank'] = rank
     # train:    
     train.launch_training_run(train_params)

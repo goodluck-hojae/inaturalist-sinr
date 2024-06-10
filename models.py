@@ -43,8 +43,27 @@ class ResidualFCNet(nn.Module):
             layers.append(ResLayer(num_filts))
         self.feats = torch.nn.Sequential(*layers)
 
+        layers_2 = []
+        layers_2.append(nn.Linear(num_inputs, num_filts))
+        layers_2.append(nn.ReLU(inplace=True))
+        for i in range(depth):
+            layers_2.append(ResLayer(num_filts))
+        self.feats_2 = torch.nn.Sequential(*layers_2)
+
+        if torch.cuda.device_count() > 1:
+            self.feats.cuda(0)
+            self.feats_2.cuda(1)
+            
+
     def forward(self, x, class_of_interest=None, return_feats=False):
-        loc_emb = self.feats(x)
+        self.feats.cuda(0)
+        self.feats_2.cuda(1)
+        x_1, x_2 = x.cuda(0), x.cuda(1)
+        print(next(self.feats.parameters()).device, x_1.device)
+        loc_emb = self.feats(x_1)
+        print(next(self.feats_2.parameters()).device, x_2.device)
+        loc_emb_2 = self.feats_2(x_2)
+        loc_emb = loc_emb + loc_emb_2.cuda(0)
         if return_feats:
             return loc_emb
         if class_of_interest is None:
@@ -53,11 +72,13 @@ class ResidualFCNet(nn.Module):
             class_pred = self.eval_single_class(loc_emb, class_of_interest)
         return torch.sigmoid(class_pred)
 
+
     def eval_single_class(self, x, class_of_interest):
         if self.inc_bias:
             return x @ self.class_emb.weight[class_of_interest, :] + self.class_emb.bias[class_of_interest]
         else:
             return x @ self.class_emb.weight[class_of_interest, :]
+
 
 class LinNet(nn.Module):
     def __init__(self, num_inputs, num_classes):

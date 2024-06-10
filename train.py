@@ -19,8 +19,7 @@ class Trainer():
         self.train_loader = train_loader
 
         # define model:
-        self.model = model.to(self.rank)
-        self.model = DDP(self.model, device_ids=[self.rank])
+        self.model = model.cuda(0)
 
         # define important objects:
         self.compute_loss = losses.get_loss_function(params)
@@ -41,7 +40,7 @@ class Trainer():
             # reset gradients:
             self.optimizer.zero_grad()
             # compute loss:
-            batch = batch.to(self.rank)
+            # batch = batch.to(self.rank)
             batch_loss = self.compute_loss(batch, self.model, self.params, self.encode_location)
             # backwards pass:
             batch_loss.backward()
