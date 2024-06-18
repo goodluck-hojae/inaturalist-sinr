@@ -29,8 +29,7 @@ class Trainer():
         self.optimizer = torch.optim.Adam(self.model.parameters(), params['lr'])
         self.lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(self.optimizer, gamma=params['lr_decay'])
 
-    def train_one_epoch(self):
-
+    def train_one_epoch(self): 
         self.model.train()
         # initialise run stats
         running_loss = 0.0
@@ -39,15 +38,30 @@ class Trainer():
         for _, batch in enumerate(self.train_loader):
             # reset gradients:
             self.optimizer.zero_grad()
+            print(f'batch shape {batch[0].shape}, {len(batch)}')
             # compute loss:
             # batch = batch.to(self.rank)
+            
+            print('3', torch.cuda.memory_allocated() / (1024 ** 2))
+            print('3', torch.cuda.memory_reserved() / (1024 ** 2))
+            
             batch_loss = self.compute_loss(batch, self.model, self.params, self.encode_location)
+            print('4', torch.cuda.memory_allocated() / (1024 ** 2))
+            print('4', torch.cuda.memory_reserved() / (1024 ** 2))
+            
             # backwards pass:
+            
             batch_loss.backward()
+            print('5', torch.cuda.memory_allocated() / (1024 ** 2))
+            print('5', torch.cuda.memory_reserved() / (1024 ** 2))
+            
             # update parameters:
             self.optimizer.step()
+            print('6', torch.cuda.memory_allocated() / (1024 ** 2))
+            print('6', torch.cuda.memory_reserved() / (1024 ** 2))
+            
             # track and report:
-            running_loss += float(batch_loss.item())
+            running_loss += float(batch_loss.item() / (1024 ** 2))
             steps_trained += 1
             samples_processed += batch[0].shape[0]
             if steps_trained % self.params['log_frequency'] == 0:
@@ -62,7 +76,7 @@ class Trainer():
         torch.save(op_state, save_path)
 
 def launch_training_run(ovr):
-    # setup:
+    # setup:  
     params = setup.get_default_params_train(ovr)
     params['save_path'] = os.path.join(params['save_base'], params['experiment_name'])
     if params['timestamp']:
@@ -88,7 +102,10 @@ def launch_training_run(ovr):
     model = models.get_model(params)
 
     # train:
+    
+    print('1', torch.cuda.memory_allocated() / (1024 ** 2))
     trainer = Trainer(model, train_loader, params)
+    print('2', torch.cuda.memory_allocated() / (1024 ** 2))
     for epoch in range(0, params['num_epochs']):
         print(f'epoch {epoch+1}')
         trainer.train_one_epoch()

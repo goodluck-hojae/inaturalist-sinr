@@ -50,12 +50,13 @@ train_params['rank'] = 0
 import torch.distributed as dist
 import torch.multiprocessing as mp
 
-# def setup_ddp(rank, world_size):
-#     os.environ['MASTER_ADDR'] = 'gypsum-gpu154'
-#     os.environ['MASTER_PORT'] = '12355'
+def setup_ddp(rank, world_size):
+    os.environ['MASTER_ADDR'] = 'gypsum-gpu160'
+    os.environ['MASTER_PORT'] = '12356'
 
-#     # initialize the process group
-#     dist.init_process_group("nccl", rank=rank, world_size=world_size) 
+    # initialize the process group
+    print(f"rank: {rank}, world_size: {world_size}")
+    dist.init_process_group("nccl", rank=rank, world_size=world_size) 
 
 
 def cleanup():
@@ -64,7 +65,7 @@ def cleanup():
 
 def demo_basic(rank, world_size):
     print(f"Running basic DDP example on rank {rank}.")
-    # setup_ddp(rank, world_size)
+    setup_ddp(rank, world_size)
     train_params['rank'] = rank
     # train:    
     train.launch_training_run(train_params)
@@ -73,13 +74,16 @@ def demo_basic(rank, world_size):
 def run_demo(demo_fn, world_size):
     mp.spawn(demo_fn,
              args=(world_size,),
-             nprocs=world_size,
+             nprocs=1,
              join=True)
 
 
-if __name__ == "__main__":
-    n_gpus = torch.cuda.device_count()
-    run_demo(demo_basic, n_gpus)
+if __name__ == "__main__": 
+    run_demo(demo_basic, 1)
+    # rank = int(os.getenv('RANK', 0))
+    # local_rank = int(os.getenv('LOCAL_RANK', 0))
+    # print(f'rank : {rank}, local_rank: {local_rank}')
+    # demo_basic()
     # # evaluate:
     # for eval_type in ['snt', 'iucn', 'geo_prior', 'geo_feature']:
     #     eval_params = {}

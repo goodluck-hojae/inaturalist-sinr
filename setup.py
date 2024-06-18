@@ -54,7 +54,7 @@ def get_default_params_train(overrides={}):
     '''
     optimization
     '''
-    params['batch_size'] = 2048
+    params['batch_size'] = 4096
     params['lr'] = 0.0005
     params['lr_decay'] = 0.98
     params['num_epochs'] = 10
