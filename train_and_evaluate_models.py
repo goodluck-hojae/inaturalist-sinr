@@ -82,6 +82,8 @@ def run_demo(demo_fn, world_size):
              join=True)
 
 if __name__ == "__main__":
+    from dotenv import load_dotenv
+    load_dotenv()
     world_size = int(os.getenv('WORLD_SIZE', 1))
     nprocs = int(os.getenv('NPROCS', 1))
     rank = int(os.getenv('RANK', 0))  # Get the rank set by torchrun

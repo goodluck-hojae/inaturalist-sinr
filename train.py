@@ -98,13 +98,15 @@ def launch_training_run(ovr):
     # model:
     model = models.get_model(params)
 
-    # train:
+    # train:   
+    import time
     trainer = Trainer(model, train_loader, params)
-    
+    start_time = time.time()
+    print('Start')
     for epoch in range(0, params['num_epochs']):
-        sampler.set_epoch(epoch)
         print(f'epoch {epoch+1}')
         trainer.train_one_epoch()
+    duration = time.time() - start_time
+    print(f'executed in {duration} seconds')
     trainer.save_model()
-
 
