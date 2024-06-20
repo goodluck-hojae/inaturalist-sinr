@@ -51,9 +51,9 @@ import torch.distributed as dist
 import torch.multiprocessing as mp
 
 def setup_ddp(rank, world_size):
-    os.environ['MASTER_ADDR'] = 'gypsum-gpu160'
-    os.environ['MASTER_PORT'] = '12356'
 
+    os.environ['MASTER_ADDR'] = os.getenv('MASTER_ADDR')
+    os.environ['MASTER_PORT'] = os.getenv('MASTER_PORT')
     # initialize the process group
     print(f"rank: {rank}, world_size: {world_size}")
     dist.init_process_group("nccl", rank=rank, world_size=world_size) 
@@ -74,12 +74,14 @@ def demo_basic(rank, world_size):
 def run_demo(demo_fn, world_size):
     mp.spawn(demo_fn,
              args=(world_size,),
-             nprocs=1,
+             nprocs=int(os.getenv('NPROCS')),
              join=True)
 
 
 if __name__ == "__main__": 
-    run_demo(demo_basic, 1)
+    from dotenv import load_dotenv
+    load_dotenv()
+    run_demo(demo_basic, int(os.getenv('WORLD_SIZE')))
     # rank = int(os.getenv('RANK', 0))
     # local_rank = int(os.getenv('LOCAL_RANK', 0))
     # print(f'rank : {rank}, local_rank: {local_rank}')

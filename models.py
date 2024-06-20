@@ -18,7 +18,8 @@ def get_model_memory_usage(model):
 def get_model(params):
 
     if params['model'] == 'ResidualFCNet':
-        model = ResidualFCNet(params['input_dim'], params['num_classes'], params['num_filts'], params['depth'], ndevices=torch.cuda.device_count())
+        model = ResidualFCNet(params['input_dim'], params['num_classes'], params['num_filts'], params['depth'], ndevices=1)
+        # model = ResidualFCNet(params['input_dim'], params['num_classes'], params['num_filts'], params['depth'], ndevices=2)
         print(f'get_model_memory_usage(model), {get_model_memory_usage(model)} MB')
         
         return model
